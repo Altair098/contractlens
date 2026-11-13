@@ -31,16 +31,30 @@ question ──►│ retrieve ──► answerer (LlmAgent) ──► verifier 
 
 ## Results
 
-Evaluation set: 10 CUAD contracts × 10 clause categories = 100 questions (46 answerable, 54 with no relevant clause).
+Evaluation set: 10 CUAD contracts × 10 clause categories = 100 questions. 46 have an answer in the contract and 54 do not, so the false-answer rate directly measures hallucination. Models ran locally through Ollama on a Kaggle T4 GPU.
 
-| Run | Accuracy | Retrieval hit | Answer F1 | Coverage | False-answer rate | Avg latency |
+| Run | Accuracy | False-answer rate | Coverage | Answer F1 | Retrieval hit | Latency / question |
 |---|---|---|---|---|---|---|
-| gemma4b-v1-baseline | | | | | | |
-| gemma4b-v2-prompt | | | | | | |
-| gemma4b-v2-verifier | | | | | | |
-| gemma4b-v2-verifier-escalate12b | | | | | | |
+| v1 prompt, no verifier (baseline) | 73% | 37.0% | 95.7% | 0.73 | 84.8% | 3.7 s |
+| v2 prompt, no verifier | 75% | 33.3% | 100% | 0.65 | 84.8% | 2.9 s |
+| **v2 prompt + verifier** | **81%** | **7.4%** | 71.7% | 0.54 | 84.8% | 2.9 s |
+| v2 prompt + verifier + Gemma 12B escalation | 81% | 14.8% | 80.4% | 0.61 | 84.8% | 5.6 s |
 
-`python scripts/compare_runs.py` prints this table from MLflow. `python scripts/threshold_sweep.py results/<run>.csv` plots accuracy, coverage and false-answer rate across verifier thresholds without re-running the model.
+*Accuracy* counts an answerable question as correct when the quoted clause reaches token F1 ≥ 0.3 against the lawyer-labelled span, and an unanswerable question as correct when the system declines. *False-answer rate* is the share of unanswerable questions that still received an answer. *Coverage* is the share of answerable questions that were answered.
+
+**Findings**
+
+- **The verifier is the main gain.** With the same prompt, it cut false answers from 33.3% to 7.4% (18 to 4 of 54) and raised accuracy from 75% to 81%. The cost is coverage: it withholds 28% of answerable questions, the intended trade-off when a wrong answer is worse than none.
+- **Escalation trades safety back for coverage.** Sending low-confidence answers to Gemma 12B recovered coverage (71.7% to 80.4%) and F1, but the larger model answered more unanswerable questions (false answers 7.4% to 14.8%) and doubled latency. A bigger model was more willing to answer, not more cautious.
+- **Prompt v2 improved safety, not overlap.** Requiring short verbatim quotes reduced false answers (37.0% to 33.3%), but lowered F1 (0.73 to 0.65) because CUAD gold spans are often whole clauses and shorter quotes match them less fully.
+- **Retrieval is the ceiling.** 84.8% of answerable questions had the gold clause in the top-4 chunks; the remaining misses cannot be fixed by the answering or verification stages.
+- **Quotes are faithful.** In the verifier run, 2.7% of accepted answers contained a quote not found in the retrieved text (6.7% with 12B escalation).
+
+**Choosing the threshold.** The sweep re-scores one run at every threshold without new model calls. Accuracy peaks at 0.6; above 0.65 coverage drops sharply for little additional safety.
+
+![Threshold sweep](docs/images/threshold_sweep.png)
+
+Reproduce with `notebooks/kaggle_eval.ipynb`, then `python scripts/compare_runs.py` and `python scripts/threshold_sweep.py results/gemma4b-v2-prompt.csv`. Results are from a 100-question subset; with 46 answerable questions, each question moves coverage by about 2 points.
 
 ## Screenshots
 
