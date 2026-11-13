@@ -42,6 +42,20 @@ Evaluation set: 10 CUAD contracts × 10 clause categories = 100 questions (46 an
 
 `python scripts/compare_runs.py` prints this table from MLflow. `python scripts/threshold_sweep.py results/<run>.csv` plots accuracy, coverage and false-answer rate across verifier thresholds without re-running the model.
 
+## Screenshots
+
+**Agent answering from a single contract with a verbatim, cited clause (Google ADK web UI)**
+
+![ADK web UI](docs/images/adk_web.png)
+
+**Evaluation run tracked in MLflow**
+
+![MLflow metrics](docs/images/mlflow_metrics.png)
+
+**MLflow trace of one question: retrieve, then answer, then verify**
+
+![MLflow trace](docs/images/mlflow_trace.png)
+
 ## Quickstart
 
 ```bash
