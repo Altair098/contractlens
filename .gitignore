@@ -12,3 +12,4 @@ mlflow.db
 logs/
 .pytest_cache/
 results/
+.adk/

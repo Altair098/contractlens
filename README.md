@@ -94,6 +94,8 @@ Without a GPU, `notebooks/kaggle_eval.ipynb` runs all experiments on a free Kagg
 adk web agents
 ```
 
+Open http://localhost:8000 and select `contractlens_agent`. Name a contract in the question ("In doc041, which state's law governs this agreement?") or let the agent pick the most relevant one; every answer comes from a single contract.
+
 ### API
 
 ```bash
@@ -107,6 +109,9 @@ curl -X POST localhost:8080/contracts -F "file=@my_contract.pdf"
 
 ```bash
 docker build -t contractlens .
+# Linux
+docker run --network host -e OLLAMA_API_BASE=http://localhost:11434 contractlens
+# macOS / Windows
 docker run -p 8080:8080 -e OLLAMA_API_BASE=http://host.docker.internal:11434 contractlens
 ```
 
@@ -148,7 +153,7 @@ The project runs entirely on local and free resources. The GCP integrations are 
 | `LocalPdfParser` (PyMuPDF) | `DocumentAIParser` in `parsing.py` |
 | Ollama Gemma | `CL_MODEL=gemini-2.5-flash` (native ADK Gemini) |
 | `uvicorn` / Docker | `deploy/cloud_run.sh`, or `adk deploy cloud_run` / `adk deploy agent_engine` for the agent |
-| Local MLflow | BigQuery sandbox analytics (works now, no billing needed) |
+| Local MLflow | `scripts/export_bigquery.py` loads results and request logs into BigQuery (free sandbox, no billing needed) |
 
 ## Project structure
 
