@@ -31,11 +31,32 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def error_result(exc: Exception) -> dict:
+    return {
+        "decision": "error", "answer": "", "quotes": [], "raw_answer": "", "raw_quotes": [], "parse_ok": False,
+        "citations": [], "confidence": 0.0, "verification": None, "escalated": False, "llm_calls": 0,
+        "retrieved": [], "latency_ms": 0.0, "error": f"{type(exc).__name__}: {exc}"[:300],
+    }
+
+
+async def ask_with_retry(app: ContractLens, question: str, doc_id: str, attempts: int = 2) -> dict:
+    for attempt in range(attempts):
+        try:
+            return await app.ask(question, doc_id)
+        except Exception as exc:
+            if attempt == attempts - 1:
+                print(f"\nquestion failed after {attempts} attempts: {type(exc).__name__}: {exc}")
+                return error_result(exc)
+            await asyncio.sleep(2)
+
+
 async def evaluate(app: ContractLens, items) -> pd.DataFrame:
     rows = []
     for item in tqdm(items, desc="questions"):
-        result = await app.ask(item.question, item.doc_id)
-        rows.append(score_item(item, result))
+        result = await ask_with_retry(app, item.question, item.doc_id)
+        row = score_item(item, result)
+        row["error"] = result.get("error", "")
+        rows.append(row)
     return pd.DataFrame(rows)
 
 
@@ -64,6 +85,7 @@ def main() -> None:
         started = time.time()
         df = asyncio.run(evaluate(app, items))
         metrics = summarize(df)
+        metrics["error_rate"] = float((df["decision"] == "error").mean())
         metrics["wall_time_s"] = time.time() - started
         mlflow.log_metrics(metrics)
 

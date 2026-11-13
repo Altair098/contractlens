@@ -62,3 +62,13 @@ def test_threshold_sweep_trades_coverage_for_safety():
     assert sweep.loc[0.0, "coverage"] == 1.0 and sweep.loc[0.0, "false_answer_rate"] == 0.5
     assert sweep.loc[0.55, "false_answer_rate"] == 0.0 and sweep.loc[0.55, "accuracy"] == 0.75
     assert sweep.loc[0.95, "coverage"] == 0.0
+
+
+def test_failed_question_is_never_counted_correct():
+    from contractlens.data import EvalItem
+    from contractlens.evaluation import score_item
+
+    item = EvalItem("d::x", "d", "Insurance", "q?", [], [])
+    result = {"decision": "error", "answer": "", "quotes": [], "raw_answer": "", "raw_quotes": [], "parse_ok": False,
+              "confidence": 0.0, "verification": None, "escalated": False, "llm_calls": 0, "retrieved": []}
+    assert score_item(item, result)["correct"] is False

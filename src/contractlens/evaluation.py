@@ -72,7 +72,10 @@ def score_item(item: EvalItem, result: dict) -> dict:
         "gold": " || ".join(item.answers),
     }
     row["unsupported"] = answered and row["quote_support"] < 0.9
-    row["correct"] = (item.answerable and answered and f1 >= F1_CORRECT_THRESHOLD) or (not item.answerable and not answered)
+    errored = result["decision"] == "error"
+    row["correct"] = not errored and (
+        (item.answerable and answered and f1 >= F1_CORRECT_THRESHOLD) or (not item.answerable and not answered)
+    )
     return row
 
 
